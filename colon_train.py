@@ -12,7 +12,7 @@ from torch.utils.data import DataLoader
 from pathlib import Path
 from tqdm import tqdm
 
-from timm.models import create_model
+# from timm.models import create_model
 from timm.utils import NativeScaler
 from timm.optim import create_optimizer
 from timm.scheduler import create_scheduler
@@ -21,14 +21,15 @@ from timm.loss import LabelSmoothingCrossEntropy
 from engine import train_one_epoch, evaluate
 from datasets.colon_dataset import ColonCancerDataset
 from utils import save
-import models
+from vit_pytorch.efficient import ViT
+from performer_pytorch import Performer
 
 
 def get_args_parser():
     parser = argparse.ArgumentParser(
         "Performer training and evaluation script on Colon data",
         add_help=False)
-    parser.add_argment("--batch_size", default=8, type=int)
+    parser.add_argument("--batch_size", default=8, type=int)
     parser.add_argument("--epochs", default=300, type=int)
 
     # Model parameters
@@ -37,7 +38,7 @@ def get_args_parser():
                         type=str,
                         metavar="MODEL",
                         help="Name of model to train")
-    parser.add_argument("input_size",
+    parser.add_argument("--input_size",
                         default=500,
                         type=int,
                         help="images input size")
@@ -68,18 +69,18 @@ def get_args_parser():
     parser.add_argument("--opt",
                         default="adamw",
                         type=str,
-                        meatavar="OPTIMISER",
-                        help="Optimiser (default: 'adamw'")
+                        metavar="OPTIMISER",
+                        help='Optimiser (default: "adamw"')
     parser.add_argument("--opt_eps",
                         default=1e-8,
                         type=float,
-                        meatvar="EPSILON",
+                        metavar="EPSILON",
                         help="Optimiser Epsilon (default: 1e-8)")
     parser.add_argument("--opt_betas",
                         default=None,
                         type=float,
                         nargs="+",
-                        meatvar="BETA",
+                        metavar="BETA",
                         help="Optimiser Betas (defaults: None, use opt default)")
     parser.add_argument("--clip_grad",
                         type=float,
@@ -89,7 +90,7 @@ def get_args_parser():
     parser.add_argument("--momentum",
                         type=float,
                         default=0.9,
-                        meatvar="M",
+                        metavar="M",
                         help="SGD momentum (default: 0.9)")
     parser.add_argument("--weight_decay",
                         type=float,
@@ -154,16 +155,19 @@ def get_args_parser():
                         default=10,
                         metavar="N",
                         help="patience epochs for Plateau LR scheduler (default: 10")
-    parser.add_argument("--deacy_rate",
+    parser.add_argument("--decay_rate",
                         "--dr",
                         type=float,
                         default=0.1,
-                        meatavar="RATE",
+                        metavar="RATE",
                         help="LR decay rate (default: 0.1)")
+    
+    # Finetuning parameters
+    parser.add_argument("--finetune", default='', help="finetune from checkpoint")
 
     # Dataset parameters
     parser.add_argument("--data_path",
-                        default='/',
+                        default='/mnt/user-temp/rob-tia/projects/attention-sampling-pytorch/dataset/colon_cancer/CRCHistoPhenotypes_2016_04_28/Classification',
                         type=str,
                         help="dataset path")
     parser.add_argument("--output_dir",
@@ -173,7 +177,7 @@ def get_args_parser():
                         default="cuda:0",
                         help="device to use for training/testing")
     parser.add_argument("--seed",
-                        default=0,
+                        default=13,
                         type=int)
     parser.add_argument("--start_epoch",
                         default=0,
@@ -223,13 +227,13 @@ def main(args):
     train_loader = DataLoader(train_dataset,
                               batch_size=args.batch_size,
                               shuffle=True,
-                              num_workers=args.workers,
+                              num_workers=args.num_workers,
                               pin_memory=args.pin_mem,
                               drop_last=True)
 
     val_dataset = ColonCancerDataset(data_directory,
                                      train=False,
-                                     seed=args.manual_seed)
+                                     seed=args.seed)
     val_loader = DataLoader(val_dataset,
                             batch_size=int(1.5 * args.batch_size),
                             shuffle=False,
@@ -238,14 +242,29 @@ def main(args):
                             drop_last=False)
 
     print(f"Creating model: {args.model}")
-    model = create_model(
-        args.model,
-        pretrained=False,
-        num_classes=2,
-        drop_rate=args.drop,
-        drop_path_rate=args.drop_path,
-        drop_block_rate=None,
+    efficient_transformer = Performer(
+        dim=512,
+        depth=1,
+        heads=8,
+        causal=True
     )
+
+    model = ViT(
+        image_size=500,
+        patch_size=25,
+        num_classes=2,
+        dim=512,
+        transformer=efficient_transformer
+    )
+    # TODO fix create model function and files
+    # model = create_model(
+    #     args.model,
+    #     pretrained=False,
+    #     num_classes=2,
+    #     drop_rate=args.drop,
+    #     drop_path_rate=args.drop_path,
+    #     drop_block_rate=None,
+    # )
 
     model.to(device)
 
@@ -279,12 +298,13 @@ def main(args):
     print(f"Starting training for {args.epochs} epochs")
     start_time = time.time()
     for epoch in tqdm(range(args.start_epoch, args.epochs)):
-        train_loss, train_metrics = train_one_epoch(model,
-                                                    criterion,
-                                                    train_loader,
-                                                    optimiser,
-                                                    device,
-                                                    set_training_mode=args.finetune == '')
+        train_loss, train_metrics = train_one_epoch(
+            model,
+            criterion,
+            train_loader,
+            optimiser,
+            device
+        )
 
         lr_scheduler.step(epoch)
         # TODO add in resuming training

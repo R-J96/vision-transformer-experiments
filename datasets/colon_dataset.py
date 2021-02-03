@@ -36,7 +36,7 @@ class ColonCancerDataset(Dataset):
     def __len__(self):
         return len(self.data)
 
-    def __getitem(self, idx):
+    def __getitem__(self, idx):
 
         folder_path = self.data[idx]
         img_id = int(folder_path.split('/')[-1].replace('img', ''))
@@ -46,5 +46,12 @@ class ColonCancerDataset(Dataset):
 
         x = imageio.imread(path.join(folder_path, f"img{img_id}.bmp"))
 
+        x = self.image_transform(x)
+
         label = int(mat.shape[0] > 0)
         return x, label
+
+
+if __name__ == '__main__':
+    colon_cancer_dataset = ColonCancerDataset('/mnt/user-temp/rob-tia/projects/attention-sampling-pytorch/dataset/colon_cancer/CRCHistoPhenotypes_2016_04_28/Classification/', train=True, seed=13)
+    print(colon_cancer_dataset.__getitem__(1))

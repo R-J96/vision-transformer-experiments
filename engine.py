@@ -12,13 +12,12 @@ def train_one_epoch(model,
                     criterion,
                     data_loader,
                     optimiser,
-                    device,
-                    set_training_mode=True
+                    device
                     ):
     y_probs = np.zeros((0, len(data_loader.dataset.CLASSES)), np.float)
     y_trues = np.zeros((0), np.int)
     losses = []
-    model.train(set_training_mode)
+    model.train()
 
     for i, (x, labels) in enumerate(data_loader):
         x = x.to(device, non_blocking=True)
@@ -36,7 +35,7 @@ def train_one_epoch(model,
         optimiser.step()
         loss_value = loss.item()
 
-        if not math.isinfinite(loss_value):
+        if not math.isfinite(loss_value):
             print(f"Loss is {loss_value}, stopping training")
             sys.exit(1)
 
@@ -44,7 +43,7 @@ def train_one_epoch(model,
 
         y_prob = F.softmax(outputs, dim=1)
         y_probs = np.concatenate([y_probs, y_prob.detach().cpu().numpy()])
-        y_trues = np.concateneate([y_trues, labels.cpu().numpy()])
+        y_trues = np.concatenate([y_trues, labels.cpu().numpy()])
 
     train_loss_epoch = np.round(np.mean(losses), 4)
     metrics = calc_cls_measures(y_probs, y_trues)

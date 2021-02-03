@@ -1,4 +1,4 @@
-# from timm.models.registry import register_model
+from timm.models.registry import register_model
 from vit_pytorch.efficient import ViT
 from performer_pytorch import Performer
 
@@ -7,7 +7,7 @@ __all__ = [
 ]
 
 
-# @register_model
+@register_model
 def performer_tiny_patch25_500(pretrained=False, **kwargs):
     efficient_transformer = Performer(
         dim=512,
