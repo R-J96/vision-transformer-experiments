@@ -14,6 +14,18 @@ def train_one_epoch(model,
                     optimiser,
                     device
                     ):
+    """Trains an input PyTorch model for one epoch
+
+    Args:
+        model (torch.nn.Module): pytorch model
+        criterion (torch.nn): loss function
+        data_loader (torch.utils.data.DataLoader): training data loader
+        optimiser (torch.optim): optimiser
+        device (torch.device): which device to train the model on
+
+    Returns:
+        np.float, dict: return training loss for one epoch and a dictionary of training metrics calculated for that epoch
+    """
     y_probs = np.zeros((0, len(data_loader.dataset.CLASSES)), np.float)
     y_trues = np.zeros((0), np.int)
     losses = []
@@ -53,6 +65,16 @@ def train_one_epoch(model,
 
 @torch.no_grad()
 def evaluate(data_loader, model, device):
+    """Evaluates a PyTorch model on a validation dataset
+
+    Args:
+        data_loader (torch.utils.data.DataLoader): validation data loader
+        model (torch.nn.Module): PyTorch model to evaluate
+        device (torch.device): device to run function on
+
+    Returns:
+        np.float, dict: returns validation loss and dict of validation metrics after one epoch
+    """
     criterion = torch.nn.CrossEntropyLoss()
 
     y_probs = np.zeros((0, len(data_loader.dataset.CLASSES)), np.float)

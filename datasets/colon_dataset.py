@@ -8,14 +8,22 @@ from torchvision import transforms
 
 
 class ColonCancerDataset(Dataset):
+    """Custom PyTorch dataset class for binary classification with CRCHistoPhenotypes dataset
+    """
 
     CLASSES = [0, 1]
 
     def __init__(self, directory, seed, train=True):
+        """
+        Args:
+            directory (str): data location
+            seed (int): random seed for replicability
+            train (bool, optional): Boolean flag to decide which fold to return. Defaults to True.
+        """
         cwd = os.getcwd().replace('dataset', '')
         directory = path.join(cwd, directory)
 
-        # randomly split data into training and validation with fixed random seed
+        # randomly split data into training and validation with fixed random seed, currently using 50:50 train:val split
         self.data = [os.path.join(directory, x) for x in os.listdir(directory)]
         train_data = random.Random(seed).sample(self.data, 50)
 

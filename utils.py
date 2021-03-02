@@ -5,6 +5,15 @@ from functools import partial
 
 
 def move_to(var, device):
+    """Moves an input data collection to an input device
+
+    Args:
+        var (dict or list or tuple): data collection to be moved
+        device (torch.device): device to move data to
+
+    Returns:
+        var: returns input data collection on new device
+    """
     if isinstance(var, dict):
         return {k: move_to(v, device) for k, v in var.items()}
     elif isinstance(var, list):
@@ -15,10 +24,14 @@ def move_to(var, device):
 
 
 def calc_cls_measures(probs, label):
-    """Calculate multi-class classification measures (Accuracy)
-    :probs: NxC numpy array storing probabilities for each case
-    :label: ground truth label
-    :returns: a dictionary of accuracy
+    """Calculates classification metrics
+
+    Args:
+        probs (np.array): array of model's predicted probabilities for each class
+        label (np.array): array of ground truth labels for each example
+
+    Returns:
+        dict: dictionary of classification metrics
     """
     label = label.reshape(-1, 1)
     preds = np.argmax(probs, axis=1)
@@ -37,12 +50,22 @@ def calc_cls_measures(probs, label):
 
 
 def save(*args, **kwargs):
+    """Saves PyTorch model
+    """
     torch.save(*args, **kwargs)
 
 
 def to_tensor(x, dtype=torch.int32, device=None):
-    """If x is a Tensor return it as is otherwise return a constant tensor of
-    type dtype."""
+    """Return a tensor of input data collection x
+
+    Args:
+        x (): input data to convert
+        dtype (torch.dtype, optional): Data type to convert x to within tensor. Defaults to torch.int32.
+        device (torch.device, optional): Which device to store output tensor on. Defaults to None.
+
+    Returns:
+        torch.Tensor: Tensor of type dtype on device
+    """
     device = torch.device('cpu') if device is None else device
     if torch.is_tensor(x):
         return x.to(device)
