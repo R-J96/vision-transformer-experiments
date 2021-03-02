@@ -26,7 +26,7 @@ def train_one_epoch(model,
         # zero parameter gradients
         optimiser.zero_grad(set_to_none=True)
 
-        # forward, backward pass and optimise
+        # compute forward, backward pass and optimise
         with torch.cuda.amp.autocast():
             outputs = model(x)
             loss = criterion(outputs, labels)
