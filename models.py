@@ -24,9 +24,30 @@ def performer_tiny_patch25_500(pretrained=False, **kwargs):
         transformer=efficient_transformer
     )
 
+    # TODO fix pretrained implementation
     # if pretrained:
     #     checkpoint = torch.load_state_dict(
     #         torch.load(PATH)
     #     )
     #     model.load_state_dict(checkpoint["model"])
+    return model
+
+
+@register_model
+def performer_small_patch25_500(pretrained=False, **kwargs):
+    efficient_transformer = Performer(
+        dim=384,
+        depth=12,
+        heads=6,
+        causal=True
+    )
+
+    model = ViT(
+        image_size=500,
+        patch_size=25,
+        num_classes=2,
+        dim=384,
+        transformer=efficient_transformer
+    )
+
     return model

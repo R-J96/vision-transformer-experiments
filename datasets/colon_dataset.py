@@ -15,6 +15,7 @@ class ColonCancerDataset(Dataset):
         cwd = os.getcwd().replace('dataset', '')
         directory = path.join(cwd, directory)
 
+        # randomly split data into training and validation with fixed random seed
         self.data = [os.path.join(directory, x) for x in os.listdir(directory)]
         train_data = random.Random(seed).sample(self.data, 50)
 
@@ -53,5 +54,5 @@ class ColonCancerDataset(Dataset):
 
 
 if __name__ == '__main__':
-    colon_cancer_dataset = ColonCancerDataset('/mnt/user-temp/rob-tia/projects/attention-sampling-pytorch/dataset/colon_cancer/CRCHistoPhenotypes_2016_04_28/Classification/', train=True, seed=13)
+    colon_cancer_dataset = ColonCancerDataset('', train=True, seed=13)
     print(colon_cancer_dataset.__getitem__(1))

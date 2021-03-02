@@ -1,5 +1,5 @@
 *.vscode
 **/__pycache__/**
-model_checkpoints/
+model_checkpoints/colon/
 wandb/
 __pycache__

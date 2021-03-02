@@ -17,12 +17,13 @@ from timm.utils import NativeScaler
 from timm.optim import create_optimizer
 from timm.scheduler import create_scheduler
 from timm.loss import LabelSmoothingCrossEntropy
+from vit_pytorch.efficient import ViT
+from performer_pytorch import Performer
 
 from engine import train_one_epoch, evaluate
 from datasets.colon_dataset import ColonCancerDataset
 from utils import save
-from vit_pytorch.efficient import ViT
-from performer_pytorch import Performer
+from config import colon_data_dir
 
 
 def get_args_parser():
@@ -34,7 +35,7 @@ def get_args_parser():
 
     # Model parameters
     parser.add_argument("--model",
-                        default="performer_tiny_patch25_500",
+                        default="performer_small_patch25_500",
                         type=str,
                         metavar="MODEL",
                         help="Name of model to train")
@@ -161,17 +162,17 @@ def get_args_parser():
                         default=0.1,
                         metavar="RATE",
                         help="LR decay rate (default: 0.1)")
-    
+
     # Finetuning parameters
     parser.add_argument("--finetune", default='', help="finetune from checkpoint")
 
     # Dataset parameters
     parser.add_argument("--data_path",
-                        default='/mnt/user-temp/rob-tia/projects/attention-sampling-pytorch/dataset/colon_cancer/CRCHistoPhenotypes_2016_04_28/Classification',
+                        default=colon_data_dir,
                         type=str,
                         help="dataset path")
     parser.add_argument("--output_dir",
-                        default="model_checkpoints/colon/",
+                        default="model_checkpoints/colon/performer/performer_small_patch25_500/",
                         help="path where to save, empty for no saving")
     parser.add_argument("--device",
                         default="cuda:0",
@@ -180,7 +181,7 @@ def get_args_parser():
                         default=13,
                         type=int)
     parser.add_argument("--start_epoch",
-                        default=0,
+                        default=1,
                         type=int,
                         metavar="N",
                         help="start epoch")
@@ -188,7 +189,7 @@ def get_args_parser():
                         action="store_true",
                         help="Perform evaluation only")
     parser.add_argument("--num_workers",
-                        default=10,
+                        default=4,
                         type=int,
                         help="Num workers for data loading")
     parser.add_argument("--pin_mem",
@@ -243,9 +244,9 @@ def main(args):
 
     print(f"Creating model: {args.model}")
     efficient_transformer = Performer(
-        dim=512,
-        depth=1,
-        heads=8,
+        dim=384,
+        depth=12,
+        heads=6,
         causal=True
     )
 
@@ -253,7 +254,7 @@ def main(args):
         image_size=500,
         patch_size=25,
         num_classes=2,
-        dim=512,
+        dim=384,
         transformer=efficient_transformer
     )
     # TODO fix create model function and files
@@ -268,18 +269,9 @@ def main(args):
 
     model.to(device)
 
-    # model_ema = None
-    # if args.model_ema:
-    #     # Important to create EMA model after cuda(), DP wrapper, and AMP but before SyncBN and DDP wrapper
-    #     model_ema = ModelEma(
-    #         model,
-    #         decay=args.model__ema_decay,
-    #         device='cpu' if args.model_ema_force_cpu else '',
-    #         resume=''
-    #     )
-
     model_without_ddp = model
-    n_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    n_parameters = sum(
+        p.numel() for p in model.parameters() if p.requires_grad)
     print(f"Number of params: {n_parameters}")
 
     linear_scaled_lr = args.lr * args.batch_size / 512.0
@@ -297,7 +289,7 @@ def main(args):
 
     print(f"Starting training for {args.epochs} epochs")
     start_time = time.time()
-    for epoch in tqdm(range(args.start_epoch, args.epochs)):
+    for epoch in tqdm(range(args.start_epoch, args.epochs + 1)):
         train_loss, train_metrics = train_one_epoch(
             model,
             criterion,
